@@ -68,17 +68,22 @@ composer require itspire/monolog-loki
 ```
 
 ### 3. Add a Loki channel in `config/logging.php`:
-
+```php
+   use Itspire\MonologLoki\Handler\LokiHandler;
+```
 ```php
 'loki' => [
     'driver' => 'monolog',
-    'handler' => \Itspire\MonologLoki\Handler\LokiHandler::class,
+    'level' => env('LOG_LEVEL', 'info'),
+    'handler' => LokiHandler::class,
     'handler_with' => [
         'apiConfig' => [
             'entrypoint' => 'http://loki-gateway:3100',
-            'basicAuth' => [
-                'username' => 'loki',
-                'password' => 'lokisecret',
+            'auth' => [
+                'basic' => [
+                    env('LOKI_USERNAME', 'loki'),
+                    env('LOKI_PASSWORD', 'lokisecret'),
+                ],
             ],
         ],
         'labels' => [
@@ -90,6 +95,20 @@ composer require itspire/monolog-loki
 ```
 
 ### 4. Use it in your code:
+
+In handle() on a job you can use shareContext() to pass information down stream for tagging log lines
+```php
+Log::shareContext([
+  'job' => class_basename($this),
+  'client_id' => $this->client->id, // or uid
+  'run' => $this->run, // or source run
+  'job' =>  class_basename($this),
+  // 'task' => '',
+  // etc...
+]);
+```
+
+
 
 ```php
 Log::channel('loki')->info('Order placed', ['order_id' => 123]);
@@ -205,3 +224,15 @@ docker compose restart
 # In your Sail project
 ./vendor/bin/sail down && ./vendor/bin/sail up -d
 ```
+
+## Displaying logs
+
+### Laravel
+
+Check out the branch [loki-logging](https://github.com/ColumbiMicroAS/netvision-payroll-plus/tree/feature/loki-logging) on netvision-payroll-plus repo. 
+
+Frontend: [LogsIndex.vue](https://github.com/ColumbiMicroAS/netvision-payroll-plus/blob/feature/loki-logging/resources/js/Pages/Admin/Logs/LogsIndex.vue)
+Backend: [AdminLogsController.php](https://github.com/ColumbiMicroAS/netvision-payroll-plus/blob/feature/loki-logging/app/Http/Controllers/Admin/AdminLogsController.php)
+
+
+
