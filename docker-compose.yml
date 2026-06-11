@@ -4,7 +4,17 @@ networks:
 
 volumes:
   loki-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /data/loki
   grafana-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /data/grafana
 
 services:
   loki:
@@ -25,9 +35,12 @@ services:
     container_name: loki-gateway
     ports:
       - "3100:3100"
+    entrypoint: >
+      sh -c "echo \"$$HTPASSWD_CONTENT\" > /etc/nginx/.htpasswd && nginx -g 'daemon off;'"
+    environment:
+      - HTPASSWD_CONTENT=${HTPASSWD_CONTENT}
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./.htpasswd:/etc/nginx/.htpasswd:ro
     networks:
       - loki-network
     depends_on:
@@ -43,8 +56,9 @@ services:
       - grafana-data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning
     environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_USER=${GF_ADMIN_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GF_ADMIN_PASSWORD}
+      - GF_SECURITY_SECRET_KEY=${GF_SECRET_KEY}
       - GF_AUTH_ANONYMOUS_ENABLED=true
       - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
     networks:
